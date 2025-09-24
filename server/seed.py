@@ -9,17 +9,12 @@ fake = Faker()
 
 if __name__ == "__main__":
     with app.app_context():
-        # -------------------------
-        # Clear and recreate database
-        # -------------------------
+    
         print("Clearing database...")
         db.drop_all()
         db.create_all()
         print("Database created!")
 
-        # -------------------------
-        # Seed Police Officers
-        # -------------------------
         officers = []
         roles = ["officer", "admin"]
         for _ in range(10):
@@ -35,18 +30,13 @@ if __name__ == "__main__":
             db.session.add(officer)
             officers.append(officer)
 
-        # -------------------------
-        # Seed Crime Categories
-        # -------------------------
         categories = []
         for name in ["Theft", "Assault", "Fraud", "Vandalism", "Traffic"]:
             category = CrimeCategory(name=name)
             db.session.add(category)
             categories.append(category)
 
-        # -------------------------
-        # Seed Crime Reports
-        # -------------------------
+
         reports = []
         for _ in range(15):
             report = CrimeReport(
@@ -59,11 +49,7 @@ if __name__ == "__main__":
             db.session.add(report)
             reports.append(report)
 
-        # -------------------------
-        # Seed Assignments
-        # -------------------------
         for report in reports:
-            # Assign 1–3 random officers per report
             assigned_officers = sample(officers, k=randint(1, min(3, len(officers))))
             for officer in assigned_officers:
                 assignment = Assignment(
@@ -73,6 +59,5 @@ if __name__ == "__main__":
                 )
                 db.session.add(assignment)
 
-        # Commit all changes
         db.session.commit()
         print("Seeding complete!")

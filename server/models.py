@@ -18,7 +18,7 @@ bcrypt = Bcrypt()
 
 class PoliceOfficer(db.Model, SerializerMixin):
     __tablename__ = "police_officers"
-    serialize_rules = ("-assignments.officer", "-password_hash")
+    serialize_rules = ("-assignments.officer", "-crime_reports.officers", "-password_hash")
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -75,7 +75,7 @@ class CrimeCategory(db.Model, SerializerMixin):
 
 class CrimeReport(db.Model, SerializerMixin):
     __tablename__ = "crime_reports"
-    serialize_rules = ("-assignments.crime_report",)
+    serialize_rules = ("-assignments.crime_report","-crime_category.crime_reports", "-officers.crime_reports")
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
