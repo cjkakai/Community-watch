@@ -1,23 +1,44 @@
 #!/usr/bin/env python3
-from flask import Flask, jsonify, request, session, redirect, url_for
+from flask import Flask, jsonify, request, session
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
-from config import db, app  # use config app/db
-from models import PoliceOfficer, CrimeCategory, CrimeReport, Assignment
 from flask_bcrypt import Bcrypt
+from flask_cors import CORS
+
+from config import DevelopmentConfig
+from models import db, bcrypt, PoliceOfficer, CrimeCategory, CrimeReport, Assignment
 from decorators import admin_required, login_required
 
-bcrypt = Bcrypt(app)
+app = Flask(__name__)
+app.config.from_object(DevelopmentConfig)
+
+db.init_app(app)
+bcrypt.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///police.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = "super-secret-key"
+CORS(app)
 
 @app.route('/')
 def index():
-    return '<h1>Project Server</h1>'
+    return '<h1>Community Watch API</h1>'
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    officer = PoliceOfficer.query.filter_by(email=email).first()
+    if officer and officer.check_password(password):
+        session["user_id"] = officer.id
+        session["role"] = officer.role
+        return {"message": f"Logged in as {officer.role}"}, 200
+    return {"error": "Invalid email or password"}, 401
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return {"message": "Logged out successfully"}, 200
 
 
 class PoliceOfficerResource(Resource):
@@ -57,7 +78,7 @@ class PoliceOfficerResource(Resource):
                 setattr(officer, field, value)
         db.session.commit()
         return officer.to_dict()
-    
+
     @admin_required
     def delete(self, id):
         officer = PoliceOfficer.query.get_or_404(id)
@@ -73,7 +94,7 @@ class CrimeReportResource(Resource):
             return report.to_dict()
         reports = CrimeReport.query.all()
         return [r.to_dict() for r in reports], 200
-    
+
     @login_required
     def post(self):
         data = request.get_json()
@@ -105,6 +126,7 @@ class CrimeReportResource(Resource):
         db.session.delete(report)
         db.session.commit()
         return {"message": "Report deleted"}, 204
+
 
 class AssignmentResource(Resource):
     def get(self, id=None):
@@ -149,33 +171,12 @@ class CrimeCategoryResource(Resource):
             db.session.rollback()
             return {"error": str(e)}, 400
 
-
 api.add_resource(PoliceOfficerResource, "/officers", "/officers/<int:id>")
 api.add_resource(CrimeReportResource, "/reports", "/reports/<int:id>")
 api.add_resource(AssignmentResource, "/assignments", "/assignments/<int:id>")
 api.add_resource(CrimeCategoryResource, "/categories", "/categories/<int:id>")
 
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
-
-    officer = PoliceOfficer.query.filter_by(email=email).first()
-    if officer and officer.check_password(password):
-        
-        session["user_id"] = officer.id
-        session["role"] = officer.role
-        return {"message": f"Logged in as {officer.role}"}, 200
-    return {"error": "Invalid email or password"}, 401
-
-@app.route('/logout', methods=['POST'])
-def logout():
-    session.clear()  
-    return {"message": "Logged out successfully"}, 200
-
-
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        db.create_all()  
     app.run(port=5555, debug=True)
