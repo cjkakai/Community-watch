@@ -1,17 +1,23 @@
-from sqlalchemy_serializer import SerializerMixin
-from sqlalchemy.ext.associationproxy import association_proxy
 from datetime import datetime
-from sqlalchemy.orm import validates
+from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from flask import session
-from config import db
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy import MetaData
+from sqlalchemy.orm import validates
+from sqlalchemy_serializer import SerializerMixin
 
+metadata = MetaData(
+    naming_convention={
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    }
+)
+
+db = SQLAlchemy(metadata=metadata)
 bcrypt = Bcrypt()
 
 
 class PoliceOfficer(db.Model, SerializerMixin):
     __tablename__ = "police_officers"
-
     serialize_rules = ("-assignments.officer", "-password_hash")
 
     id = db.Column(db.Integer, primary_key=True)
@@ -21,21 +27,18 @@ class PoliceOfficer(db.Model, SerializerMixin):
     email = db.Column(db.String, unique=True, nullable=False)
     phone = db.Column(db.String, unique=True, nullable=False)
     password_hash = db.Column(db.String, nullable=False)
-    role = db.Column(db.String, default="officer")  # "officer" or "admin"
+    role = db.Column(db.String, default="officer")
     created_at = db.Column(db.DateTime, default=datetime.now)
 
-    # Relationships
     assignments = db.relationship("Assignment", back_populates="officer")
     crime_reports = association_proxy("assignments", "crime_report")
 
-    # Password helpers
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
     def check_password(self, password):
         return bcrypt.check_password_hash(self.password_hash, password)
 
-    # Validators
     @validates("phone")
     def validate_phone(self, key, phone):
         if not phone.isdigit() or len(phone) < 10:
@@ -51,6 +54,7 @@ class PoliceOfficer(db.Model, SerializerMixin):
     def __repr__(self):
         return f"<PoliceOfficer {self.name} - {self.role}>"
 
+
 class CrimeCategory(db.Model, SerializerMixin):
     __tablename__ = "crime_categories"
     serialize_rules = ("-crime_reports.crime_category",)
@@ -62,15 +66,16 @@ class CrimeCategory(db.Model, SerializerMixin):
     crime_reports = db.relationship(
         "CrimeReport",
         back_populates="crime_category",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self):
         return f"<CrimeCategory {self.name}>"
 
+
 class CrimeReport(db.Model, SerializerMixin):
     __tablename__ = "crime_reports"
-    serialize_rules = ("-citizen.crime_reports", "-assignments.crime_report")
+    serialize_rules = ("-assignments.crime_report",)
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String, nullable=False)
@@ -93,6 +98,7 @@ class CrimeReport(db.Model, SerializerMixin):
 
     def __repr__(self):
         return f"<CrimeReport {self.title} - {self.status}>"
+
 
 class Assignment(db.Model, SerializerMixin):
     __tablename__ = "assignments"

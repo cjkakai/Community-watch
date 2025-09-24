@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 
-# Standard library imports
-from random import randint, choice as rc
-
-# Remote library imports
+from random import randint, choice as rc, sample
 from faker import Faker
-
-# Local imports
 from app import app
-from models import db, Citizen, PoliceOfficer, CrimeReport, Assignment
+from models import db, PoliceOfficer, CrimeCategory, CrimeReport, Assignment
 
 fake = Faker()
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     with app.app_context():
+        # -------------------------
+        # Clear and recreate database
+        # -------------------------
         print("Clearing database...")
         db.drop_all()
         db.create_all()
@@ -31,10 +28,10 @@ if __name__ == '__main__':
                 badge_number=str(randint(10000000, 99999999)),
                 rank=rc(["Constable", "Sergeant", "Inspector", "Chief"]),
                 email=fake.unique.email(),
-                phone=fake.unique.msisdn()[:10],  # Ensure 10 digits
+                phone=fake.unique.msisdn()[:10],
                 role=rc(roles)
             )
-            officer.set_password("password123")  # Default password
+            officer.set_password("password123")
             db.session.add(officer)
             officers.append(officer)
 
@@ -42,10 +39,10 @@ if __name__ == '__main__':
         # Seed Crime Categories
         # -------------------------
         categories = []
-        for cat_name in ["Theft", "Assault", "Fraud", "Vandalism", "Traffic"]:
-            cat = CrimeCategory(name=cat_name)
-            db.session.add(cat)
-            categories.append(cat)
+        for name in ["Theft", "Assault", "Fraud", "Vandalism", "Traffic"]:
+            category = CrimeCategory(name=name)
+            db.session.add(category)
+            categories.append(category)
 
         # -------------------------
         # Seed Crime Reports
@@ -66,14 +63,16 @@ if __name__ == '__main__':
         # Seed Assignments
         # -------------------------
         for report in reports:
-            # Assign 1-3 officers randomly to each report
-            assigned_officers = rc(officers)
-            assignment = Assignment(
-                role_in_case=rc(["Lead Investigator", "Support Officer"]),
-                crime_report=report,
-                officer=assigned_officers
-            )
-            db.session.add(assignment)
+            # Assign 1–3 random officers per report
+            assigned_officers = sample(officers, k=randint(1, min(3, len(officers))))
+            for officer in assigned_officers:
+                assignment = Assignment(
+                    role_in_case=rc(["Lead Investigator", "Support Officer"]),
+                    crime_report=report,
+                    officer=officer
+                )
+                db.session.add(assignment)
 
+        # Commit all changes
         db.session.commit()
         print("Seeding complete!")
