@@ -1,15 +1,36 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
-import {
-  policeOfficers,
-  getOfficerAssignments
-} from "../data/mockData";
+// import {
+//   policeOfficers,
+//   getOfficerAssignments
+// } from "../data/mockData";
 
 function Officers() {
   const { user } = useContext(AuthContext);
+  const [officers, setOfficers] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+
   const [selectedRole, setSelectedRole] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOfficer, setSelectedOfficer] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/officers'),
+      fetch('/assignments'),
+
+    ])
+    .then(responses => Promise.all(responses.map(r => r.json())))
+    .then(([officersData, assignmentsData]) => {
+      setOfficers(officersData);
+      setAssignments(assignmentsData)
+    })
+    .catch(error=>console.error('Error Fetching data:',error));
+  },[]);
+
+  const getOfficerAssignments = (officerId) => {
+    return assignments.filter(assignment => assignment.officer_id === officerId);
+  };
 
   if (!user) {
     return (
@@ -20,7 +41,7 @@ function Officers() {
   }
 
   // Filter officers based on selected filters
-  let filteredOfficers = policeOfficers;
+  let filteredOfficers = officers;
 
   if (selectedRole !== "all") {
     filteredOfficers = filteredOfficers.filter(officer => officer.role === selectedRole);
@@ -77,7 +98,7 @@ function Officers() {
       </div>
 
       <div className="mb-6 text-slate-600 text-sm">
-        Showing {filteredOfficers.length} of {policeOfficers.length} officers
+        Showing {filteredOfficers.length} of {officers.length} officers
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
