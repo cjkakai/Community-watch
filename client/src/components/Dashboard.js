@@ -1,17 +1,54 @@
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import {
-  getStatistics,
-  crimeReports,
-  getReportsByStatus
-} from "../data/mockData";
+
 
 function Dashboard() {
   const { user } = useContext(AuthContext);
-  const stats = getStatistics();
-  const recentReports = crimeReports.slice(0, 5);
-  const openReports = getReportsByStatus('open');
+  // const stats = getStatistics();
+  // const recentReports = crimeReports.slice(0, 5);
+  // const openReports = getReportsByStatus('open');
+  const [stats,setStats] = useState({
+    totalReports:0,
+    openReports:0,
+    pendingReports:0,
+    closedReports:0,
+    totalOfficers:0,
+    totalAssignments:0,
+  });
+
+  const [recentReports, setRecentReports] = useState([]);
+  const [openReportList, setOpenReportList] = useState([]); 
+  useEffect(() => {
+    // Fetching reports and police officer data
+
+    Promise.all([
+      fetch('/reports'),
+      fetch('/assignments'),
+      fetch('/officers'),
+    ])
+    .then(responses => Promise.all(responses.map(r => r.json())))
+    .then(([reports,officers,assignments]) => {
+      // manipulating the data
+      const openReports = reports.filter(r => r.status === 'open').length;
+      const pendingReports = reports.filter(r => r.status == 'pending').length;
+      const closedReports = reports.filter(r => r.status == 'closed').length;
+
+      setStats({
+        totalReports:reports.length,
+        openReports,
+        pendingReports,
+        closedReports,
+        totalOfficers: officers.length,
+        totalAssignments: assignments.length
+      });
+
+      setOpenReportList(reports.filter(r => r.status === 'open'));  
+      
+      setRecentReports(reports.slice(0, 5));
+    })
+    .catch(error => console.error('Error fetching data:', error));
+  }, []);
 
   if (!user) {
     return (
@@ -98,7 +135,7 @@ function Dashboard() {
             <Link to="/reports?status=open" className="text-primary-600 hover:text-primary-700 text-sm font-medium transition-colors">View All Open</Link>
           </div>
           <div className="p-6">
-            {openReports.slice(0, 3).map(report => (
+            {openReportList.slice(0, 3).map(report => (
               <div key={report.id} className="p-4 rounded-md mb-4 bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-primary-300 transition-all">
                 <h4 className="text-sm font-semibold text-slate-900 mb-1">{report.title}</h4>
                 <p className="text-xs text-slate-600 mb-3">{report.location}</p>

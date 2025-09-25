@@ -1,22 +1,44 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
-import {
-  crimeReports,
-  crimeCategories,
-  getReportAssignments
-} from "../data/mockData";
 
 function CrimeReports() {
+  
   const { user } = useContext(AuthContext);
+  const [reports, setReports] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [assignments, setAssignments] = useState([]);
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
+  
+  useEffect(() => {
+    // Fetch reports, categories, and assignments
+    Promise.all([
+      fetch('/reports'),
+      fetch('/categories'),
+      fetch('/assignments')
+    ])
+    .then(responses => Promise.all(responses.map(r => r.json())))
+    .then(([reportsData, categoriesData, assignmentsData]) => {
+      setReports(reportsData);
+      setCategories(categoriesData);
+      setAssignments(assignmentsData);
+    })
+    .catch(error => console.error('Error fetching data:', error));
+  }, []);
 
+  const getReportAssignments = (reportId) => {
+    return assignments.filter(assignment => assignment.crime_report_id === reportId);
+  };
+
+  const handleReportClick = (report) => {
+    setSelectedReport(report);
+  };
   
 
   // Filter reports based on selected filters
-  let filteredReports = crimeReports;
+  let filteredReports = reports;
 
   if (selectedStatus !== "all") {
     filteredReports = filteredReports.filter(report => report.status === selectedStatus);
@@ -31,14 +53,10 @@ function CrimeReports() {
   if (searchTerm) {
     filteredReports = filteredReports.filter(report =>
       report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.location.toLowerCase().includes(searchTerm.toLowerCase())
+      report.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      report.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }
-
-  const handleReportClick = (report) => {
-    setSelectedReport(report);
-  };
 
   const closeModal = () => {
     setSelectedReport(null);
@@ -85,7 +103,7 @@ function CrimeReports() {
                 className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white min-w-32"
               >
                 <option value="all">All Categories</option>
-                {crimeCategories.map(category => (
+                {categories.map(category => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
@@ -95,7 +113,7 @@ function CrimeReports() {
         </div>
         
         <div className="mb-6 text-slate-600 text-sm">
-          Showing {filteredReports.length} of {crimeReports.length} reports
+          Showing {filteredReports.length} of {reports.length} reports
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -250,7 +268,7 @@ function CrimeReports() {
             className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white min-w-32"
           >
             <option value="all">All Categories</option>
-            {crimeCategories.map(category => (
+            {categories.map(category => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
@@ -260,7 +278,7 @@ function CrimeReports() {
       </div>
 
       <div className="mb-6 text-slate-600 text-sm">
-        Showing {filteredReports.length} of {crimeReports.length} reports
+        Showing {filteredReports.length} of {reports.length} reports
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

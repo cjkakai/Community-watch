@@ -1,17 +1,47 @@
-import React from "react";
+import React, {useState, useEffect} from "react";
 import { Link } from "react-router-dom";
-// import { AuthContext } from "../context/AuthContext";
-import {
-  getStatistics,
-  crimeReports,
-  getReportsByStatus
-} from "../data/mockData";
 
 function Home(){
-    // Any users can see ongoing cases
-    const stats = getStatistics();
-    const recentReports = crimeReports.slice(0,5);
-    const openReports = getReportsByStatus('open');
+
+    const [stats,setStats] = useState({
+      totalReports:0,
+      openReports:0,
+      pendingReports:0,
+      closedReports:0,
+      totalOfficers:0,
+      totalAssignments:0,
+    });
+
+    const [recentReports, setRecentReports] = useState([]);
+
+    useEffect(() => {
+      // Fetching reports and police officer data
+
+      Promise.all([
+        fetch('/reports'),
+        fetch('/assignments'),
+        fetch('/officers'),
+      ])
+      .then(responses => Promise.all(responses.map(r => r.json())))
+      .then(([reports,officers,assignments]) => {
+        // manipulating the data
+        const openReports = reports.filter(r => r.status === 'open').length;
+        const pendingReports = reports.filter(r => r.status == 'pending').length;
+        const closedReports = reports.filter(r => r.status == 'closed').length;
+
+        setStats({
+          totalReports:reports.length,
+          openReports,
+          pendingReports,
+          closedReports,
+          totalOfficers: officers.length,
+          totalAssignments: assignments.length
+        });
+        
+        setRecentReports(reports.slice(0, 5));
+      })
+      .catch(error => console.error('Error fetching data:', error));
+    }, []);
 
     return (
         <div className="max-w-7xl mx-auto">
