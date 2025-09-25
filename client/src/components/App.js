@@ -1,6 +1,5 @@
 import React from "react";
 import { Switch, Route } from "react-router-dom";
-import Navigation from "./Navigation";
 import Dashboard from "./Dashboard";
 import Home from "./Home";
 import CrimeReports from "./CrimeReports";
@@ -13,15 +12,20 @@ function App() {
   return (
     <AuthProvider>
       <div className="min-h-screen flex flex-col">
-        <Navigation />
-        <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+        {/* Routes */}
+        <main className="flex-1 w-full">
           <Switch>
+            {/* Full width landing page */}
             <Route exact path="/" component={Home} />
-            <Route exact path="/dashboard" component={Dashboard} />
-            <Route path="/login" component={Login} />
-            <Route path="/reports" component={CrimeReports} />
-            <Route path="/officers" component={Officers} />
-            <Route path="/assignments" component={Assignments} />
+
+            {/* Wrapped routes (centered content) */}
+            <div className="p-6 max-w-7xl mx-auto w-full">
+              <Route exact path="/dashboard" component={Dashboard} />
+              <Route path="/login" component={Login} />
+              <Route path="/reports" component={CrimeReports} />
+              <Route path="/officers" component={Officers} />
+              <Route path="/assignments" component={Assignments} />
+            </div>
           </Switch>
         </main>
       </div>
