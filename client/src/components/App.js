@@ -11,21 +11,18 @@ import { AuthProvider } from "../context/AuthContext";
 function App() {
   return (
     <AuthProvider>
-      <div className="min-h-screen flex flex-col">
-        {/* Routes */}
+      <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
         <main className="flex-1 w-full">
           <Switch>
-            {/* Full width landing page */}
+            {/* Home page (landing) */}
             <Route exact path="/" component={Home} />
 
-            {/* Wrapped routes (centered content) */}
-            <div className="p-6 max-w-7xl mx-auto w-full">
-              <Route exact path="/dashboard" component={Dashboard} />
-              <Route path="/login" component={Login} />
-              <Route path="/reports" component={CrimeReports} />
-              <Route path="/officers" component={Officers} />
-              <Route path="/assignments" component={Assignments} />
-            </div>
+            {/* Full-width dashboard routes */}
+            <Route exact path="/dashboard" component={Dashboard} />
+            <Route path="/login" component={Login} />
+            <Route path="/reports" component={CrimeReports} />
+            <Route path="/officers" component={Officers} />
+            <Route path="/assignments" component={Assignments} />
           </Switch>
         </main>
       </div>
