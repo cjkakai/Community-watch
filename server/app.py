@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from flask import Flask, jsonify, request, session
+import os
+from flask import Flask, jsonify, request, session, send_from_directory
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
@@ -176,7 +177,18 @@ api.add_resource(CrimeReportResource, "/reports", "/reports/<int:id>")
 api.add_resource(AssignmentResource, "/assignments", "/assignments/<int:id>")
 api.add_resource(CrimeCategoryResource, "/categories", "/categories/<int:id>")
 
+
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_react(path):
+    root_dir = os.path.join(os.getcwd(), "client", "build")
+    if path != "" and os.path.exists(os.path.join(root_dir, path)):
+        return send_from_directory(root_dir, path)
+    else:
+        return send_from_directory(root_dir, "index.html")
+
+
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  
+        db.create_all()
     app.run(port=5555, debug=True)
