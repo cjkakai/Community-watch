@@ -35,7 +35,7 @@ function Navigation() {
           Community Watch
         </Link>
         <div className="flex items-center gap-6">
-          <Link to="/" className="text-slate-600 hover:text-primary-600 hover:bg-slate-50 font-medium px-3 py-2 rounded-md transition-all">
+          <Link to="/dashboard" className="text-slate-600 hover:text-primary-600 hover:bg-slate-50 font-medium px-3 py-2 rounded-md transition-all">
             Dashboard
           </Link>
           <Link to="/reports" className="text-slate-600 hover:text-primary-600 hover:bg-slate-50 font-medium px-3 py-2 rounded-md transition-all">
