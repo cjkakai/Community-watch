@@ -63,4 +63,7 @@ __pycache__
 *.db
 instance
 .vscode
-package-lock.json
+package-lock.json\
+
+# Ignore env
+.env
