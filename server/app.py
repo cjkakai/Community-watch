@@ -19,7 +19,9 @@ migrate = Migrate(app, db)
 api = Api(app)
 CORS(app)
 
-@app.route('/login', methods=['POST'])
+# REMOVED THE CONFLICTING @app.route('/') HERE
+
+@app.route('/api/login', methods=['POST'])  # Added /api prefix
 def login():
     data = request.get_json()
     email = data.get("email")
@@ -32,7 +34,7 @@ def login():
         return {"message": f"Logged in as {officer.role}"}, 200
     return {"error": "Invalid email or password"}, 401
 
-@app.route('/logout', methods=['POST'])
+@app.route('/api/logout', methods=['POST'])  # Added /api prefix
 def logout():
     session.clear()
     return {"message": "Logged out successfully"}, 200
@@ -169,12 +171,14 @@ class CrimeCategoryResource(Resource):
             db.session.rollback()
             return {"error": str(e)}, 400
 
-api.add_resource(PoliceOfficerResource, "/officers", "/officers/<int:id>")
-api.add_resource(CrimeReportResource, "/reports", "/reports/<int:id>")
-api.add_resource(AssignmentResource, "/assignments", "/assignments/<int:id>")
-api.add_resource(CrimeCategoryResource, "/categories", "/categories/<int:id>")
+# Add /api prefix to all API resources
+api.add_resource(PoliceOfficerResource, "/api/officers", "/api/officers/<int:id>")
+api.add_resource(CrimeReportResource, "/api/reports", "/api/reports/<int:id>")
+api.add_resource(AssignmentResource, "/api/assignments", "/api/assignments/<int:id>")
+api.add_resource(CrimeCategoryResource, "/api/categories", "/api/categories/<int:id>")
 
 
+# React frontend routes - this should be LAST
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_react(path):
