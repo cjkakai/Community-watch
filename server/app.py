@@ -19,10 +19,6 @@ migrate = Migrate(app, db)
 api = Api(app)
 CORS(app)
 
-@app.route('/')
-def index():
-    return '<h1>Community Watch API</h1>'
-
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
