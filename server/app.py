@@ -8,7 +8,7 @@ from flask_cors import CORS
 
 from config import DevelopmentConfig
 from models import db, bcrypt, PoliceOfficer, CrimeCategory, CrimeReport, Assignment
-from decorators import admin_required, login_required
+from decorators import rank_required, login_required
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -80,7 +80,7 @@ class PoliceOfficerResource(Resource):
         db.session.commit()
         return officer.to_dict()
 
-    @admin_required
+    @rank_required
     def delete(self, id):
         officer = PoliceOfficer.query.get_or_404(id)
         db.session.delete(officer)
@@ -136,7 +136,8 @@ class AssignmentResource(Resource):
             return assignment.to_dict()
         assignments = Assignment.query.all()
         return [a.to_dict() for a in assignments], 200
-
+    
+    @rank_required
     def post(self):
         data = request.get_json()
         try:
