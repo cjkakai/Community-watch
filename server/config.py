@@ -1,10 +1,9 @@
 import os
 from dotenv import load_dotenv
 
-# Load variables from .env if present (useful for local testing)
+# Load .env for local development
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, ".env"))
-
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-key")
@@ -13,7 +12,7 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    # Use DATABASE_URL if defined, otherwise fallback to SQLite for local dev
+    # Use DATABASE_URL if defined, otherwise fallback to local SQLite
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
         f"sqlite:///{os.path.join(basedir, 'app.db')}"

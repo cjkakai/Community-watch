@@ -34,7 +34,7 @@ pickleshare==0.7.5
 prompt_toolkit==3.0.52
 ptyprocess==0.7.0
 pure_eval==0.2.3
-psycopg2-binary==2.9.7
+psycopg2-binary==2.9.9
 Pygments==2.19.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
