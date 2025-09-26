@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import Navbar from "./Navigation";
 import CountUp from "react-countup"
 function Home() {
   const [stats, setStats] = useState({
@@ -42,7 +41,6 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* <Navbar /> */}
       {/* Hero Banner */}
       <div
         className="relative w-full h-80 flex items-center justify-center text-center"
