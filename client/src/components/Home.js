@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import Navbar from "./Navbar";
 
 function Home() {
   const [stats, setStats] = useState({
@@ -41,18 +42,7 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 flex justify-between items-center px-6 py-4 bg-slate-900 shadow-md">
-        <h1 className="text-2xl font-bold text-red-500">🚨 Crime Watch</h1>
-        <div className="flex gap-6 text-sm">
-          <Link to="/" className="hover:text-red-400">Home</Link>
-          <Link to="/reports" className="hover:text-red-400">Reports</Link>
-          <Link to="/officers" className="hover:text-red-400">Officers</Link>
-          <Link to="/assignments" className="hover:text-red-400">Assignments</Link>
-          <Link to="/login" className="hover:text-red-400">Login</Link>
-        </div>
-      </nav>
-
+      <Navbar />
       {/* Hero Banner */}
       <div
         className="relative w-full h-80 flex items-center justify-center text-center"
