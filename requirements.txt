@@ -32,6 +32,7 @@ parso==0.8.5
 pexpect==4.9.0
 pickleshare==0.7.5
 prompt_toolkit==3.0.52
+psycopg2-binary==2.9.7
 ptyprocess==0.7.0
 pure_eval==0.2.3
 Pygments==2.19.2
