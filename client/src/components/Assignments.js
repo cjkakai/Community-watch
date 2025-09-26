@@ -1,286 +1,250 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import {
-  assignments,
-  policeOfficers,
-  crimeReports,
-  getOfficerAssignments,
-  getReportAssignments
-} from "../data/mockData";
 
 function Assignments() {
   const { user } = useContext(AuthContext);
-  const [viewMode, setViewMode] = useState("all"); // all, by-officer, by-case
-  const [selectedOfficer, setSelectedOfficer] = useState("all");
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [assignments, setAssignments] = useState([]);
+  const [officers, setOfficers] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [assignmentsRes, officersRes, reportsRes] = await Promise.all([
+        fetch('/assignments'),
+        fetch('/officers'),
+        fetch('/reports')
+      ]);
+
+      const [assignmentsData, officersData, reportsData] = await Promise.all([
+        assignmentsRes.json(),
+        officersRes.json(),
+        reportsRes.json()
+      ]);
+
+      setAssignments(assignmentsData);
+      setOfficers(officersData);
+      setReports(reportsData);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
+
+  const handleDelete = async (assignmentId) => {
+    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
+
+    try {
+      const response = await fetch(`/assignments/${assignmentId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setAssignments(assignments.filter(assignment => assignment.id !== assignmentId));
+      }
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+    }
+  };
+
+  const handleEdit = (assignment) => {
+    setEditingAssignment(assignment.id);
+    setEditForm({
+      role_in_case: assignment.role_in_case,
+      officer_id: assignment.officer_id,
+      crime_report_id: assignment.crime_report_id
+    });
+  };
+
+  const handleUpdate = async (assignmentId) => {
+    try {
+      const response = await fetch(`/assignments/${assignmentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm)
+      });
+
+      if (response.ok) {
+        const updatedAssignment = await response.json();
+        setAssignments(assignments.map(assignment => 
+          assignment.id === assignmentId ? updatedAssignment : assignment
+        ));
+        setEditingAssignment(null);
+      }
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+    }
+  };
+
+  const getOfficerName = (officerId) => {
+    const officer = officers.find(off => off.id === officerId);
+    return officer ? officer.name : 'Unknown Officer';
+  };
+
+  const getReportTitle = (reportId) => {
+    const report = reports.find(rep => rep.id === reportId);
+    return report ? report.title : 'Unknown Report';
+  };
 
   if (!user) {
-    return (
-      <div className="text-center p-12 bg-white rounded-lg shadow-sm border border-slate-200 text-slate-600 text-lg">
-        Please log in to view assignments.
-      </div>
-    );
+    return <div>Please log in to view assignments.</div>;
   }
-
-  // Filter assignments based on selected filters
-  let filteredAssignments = assignments;
-
-  if (selectedOfficer !== "all") {
-    filteredAssignments = filteredAssignments.filter(assignment => 
-      assignment.officer_id === parseInt(selectedOfficer)
-    );
-  }
-
-  if (selectedStatus !== "all") {
-    filteredAssignments = filteredAssignments.filter(assignment => 
-      assignment.crime_report.status === selectedStatus
-    );
-  }
-
-  if (searchTerm) {
-    filteredAssignments = filteredAssignments.filter(assignment =>
-      assignment.crime_report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.officer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.role_in_case.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
-
-  const groupedByOfficer = policeOfficers.map(officer => ({
-    officer,
-    assignments: getOfficerAssignments(officer.id)
-  }));
-
-  const groupedByCase = crimeReports.map(report => ({
-    report,
-    assignments: getReportAssignments(report.id)
-  }));
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Case Assignments</h1>
-        {user.role === 'admin' && (
-          <button className="btn btn-primary">+ New Assignment</button>
-        )}
+        <h1 className="text-3xl font-bold text-slate-900">Assignments</h1>
+        <Link to="/assignments/new" className="btn btn-primary">
+          New Assignment
+        </Link>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 mb-6">
-        <div className="flex gap-4 mb-6 border-b border-slate-200">
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              viewMode === 'all'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-            onClick={() => setViewMode('all')}
-          >
-            All Assignments
-          </button>
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              viewMode === 'by-officer'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-            onClick={() => setViewMode('by-officer')}
-          >
-            By Officer
-          </button>
-          <button
-            className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-              viewMode === 'by-case'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-            onClick={() => setViewMode('by-case')}
-          >
-            By Case
-          </button>
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+        <div className="p-6 border-b border-slate-200">
+          <h2 className="text-xl font-semibold text-slate-900">All Assignments</h2>
         </div>
 
-        {viewMode === 'all' && (
-          <>
-            <div className="flex gap-6 items-center flex-wrap mt-6">
-              <div className="flex-1 min-w-64">
-                <input
-                  type="text"
-                  placeholder="Search assignments..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
-                />
-              </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Officer
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Crime Report
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Role in Case
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Assigned Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {assignments.map(assignment => (
+                <tr key={assignment.id} className="hover:bg-slate-50">
+                  {editingAssignment === assignment.id ? (
+                    <>
+                      <td className="px-6 py-4">
+                        <select
+                          value={editForm.officer_id}
+                          onChange={(e) => setEditForm({...editForm, officer_id: parseInt(e.target.value)})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                        >
+                          {officers.map(officer => (
+                            <option key={officer.id} value={officer.id}>
+                              {officer.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          value={editForm.crime_report_id}
+                          onChange={(e) => setEditForm({...editForm, crime_report_id: parseInt(e.target.value)})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                        >
+                          {reports.map(report => (
+                            <option key={report.id} value={report.id}>
+                              {report.title}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-6 py-4">
+                        <input
+                          type="text"
+                          value={editForm.role_in_case}
+                          onChange={(e) => setEditForm({...editForm, role_in_case: e.target.value})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-slate-600">
+                          {new Date(assignment.assigned_at).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleUpdate(assignment.id)}
+                            className="btn btn-sm btn-primary"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingAssignment(null)}
+                            className="btn btn-sm btn-secondary"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-slate-900">
+                          {getOfficerName(assignment.officer_id)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-slate-900">
+                          {getReportTitle(assignment.crime_report_id)}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
+                          {assignment.role_in_case}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-slate-600">
+                          {new Date(assignment.assigned_at).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(assignment)}
+                            className="btn btn-sm btn-secondary"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(assignment.id)}
+                            className="btn btn-sm btn-danger"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-              <div className="flex gap-4">
-                <select
-                  value={selectedOfficer}
-                  onChange={(e) => setSelectedOfficer(e.target.value)}
-                  className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white min-w-32"
-                >
-                  <option value="all">All Officers</option>
-                  {policeOfficers.map(officer => (
-                    <option key={officer.id} value={officer.id}>
-                      {officer.name}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white min-w-32"
-                >
-                  <option value="all">All Status</option>
-                  <option value="open">Open</option>
-                  <option value="pending">Pending</option>
-                  <option value="closed">Closed</option>
-                </select>
-              </div>
+          {assignments.length === 0 && (
+            <div className="text-center py-8 text-slate-500">
+              No assignments found. <Link to="/assignments/new" className="text-primary-600 hover:text-primary-700">Create one</Link>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
-
-      {viewMode === 'all' && (
-        <>
-          <div className="mb-6 text-slate-600 text-sm">
-            Showing {filteredAssignments.length} of {assignments.length} assignments
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {filteredAssignments.map(assignment => (
-              <div key={assignment.id} className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 hover:-translate-y-1 hover:shadow-md transition-all">
-                <div className="flex justify-between items-start mb-4 gap-4">
-                  <h3 className="text-lg font-semibold text-slate-900 leading-tight flex-1">{assignment.crime_report.title}</h3>
-                  <span className={`status-badge status-${assignment.crime_report.status}`}>
-                    {assignment.crime_report.status.toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="flex gap-6 mb-4">
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-600 mb-1 flex items-center gap-1">
-                      📍 {assignment.crime_report.location}
-                    </p>
-                    <p className="text-sm text-slate-600 mb-1 flex items-center gap-1">
-                      🏷️ {assignment.crime_report.crime_category.name}
-                    </p>
-                    <p className="text-sm text-slate-600 flex items-center gap-1">
-                      📅 Reported: {new Date(assignment.crime_report.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {assignment.officer.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-900">{assignment.officer.name}</h4>
-                      <p className="text-xs text-slate-600">{assignment.officer.rank}</p>
-                      <span className="text-xs text-primary-600 font-medium">{assignment.role_in_case}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-slate-200">
-                  <span className="text-xs text-slate-500">
-                    Assigned: {new Date(assignment.assigned_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {viewMode === 'by-officer' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {groupedByOfficer.map(({ officer, assignments }) => (
-            <div key={officer.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-              <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-slate-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-bold text-sm">
-                    {officer.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900">{officer.name}</h3>
-                    <p className="text-sm text-slate-600">{officer.rank} - {officer.role}</p>
-                  </div>
-                </div>
-                <span className="text-sm text-slate-600 font-medium">
-                  {assignments.length} assignment(s)
-                </span>
-              </div>
-
-              <div className="p-6">
-                {assignments.map(assignment => (
-                  <div key={assignment.id} className="p-4 mb-3 last:mb-0 bg-slate-50 rounded-md border border-slate-200">
-                    <h4 className="text-base font-semibold text-slate-900 mb-1">{assignment.crime_report.title}</h4>
-                    <p className="text-sm text-slate-600 mb-3">{assignment.crime_report.location}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-primary-600 font-medium">{assignment.role_in_case}</span>
-                      <span className={`status-badge status-${assignment.crime_report.status}`}>
-                        {assignment.crime_report.status.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {assignments.length === 0 && (
-                  <p className="text-slate-600 text-center py-4">No current assignments</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {viewMode === 'by-case' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {groupedByCase.filter(({ assignments }) => assignments.length > 0).map(({ report, assignments }) => (
-            <div key={report.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-6 border-b border-slate-200 bg-slate-50">
-                <div className="flex justify-between items-start gap-4 mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-1">{report.title}</h3>
-                    <p className="text-sm text-slate-600">{report.location}</p>
-                  </div>
-                  <span className={`status-badge status-${report.status}`}>
-                    {report.status.toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-sm text-slate-600 font-medium">
-                  {assignments.length} officer(s) assigned
-                </span>
-              </div>
-
-              <div className="p-6">
-                {assignments.map(assignment => (
-                  <div key={assignment.id} className="flex items-center gap-3 p-3 mb-3 last:mb-0 bg-slate-50 rounded-md border border-slate-200">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {assignment.officer.name.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-slate-900">{assignment.officer.name}</h4>
-                      <p className="text-xs text-slate-600">{assignment.officer.rank}</p>
-                      <span className="text-xs text-primary-600 font-medium">{assignment.role_in_case}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {((viewMode === 'all' && filteredAssignments.length === 0) ||
-        (viewMode === 'by-officer' && groupedByOfficer.every(g => g.assignments.length === 0)) ||
-        (viewMode === 'by-case' && groupedByCase.every(g => g.assignments.length === 0))) && (
-        <div className="text-center p-12 bg-white rounded-lg shadow-sm border border-slate-200">
-          <h3 className="text-xl font-semibold text-slate-900 mb-2">No assignments found</h3>
-          <p className="text-slate-600">Try adjusting your search criteria or filters.</p>
-        </div>
-      )}
     </div>
   );
 }
