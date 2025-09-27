@@ -1,23 +1,40 @@
+# Standard library imports
 import os
-from dotenv import load_dotenv
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(basedir, ".env"))
+# Remote library imports
+from flask import Flask
+from flask_cors import CORS
+from flask_migrate import Migrate
+from flask_restful import Api
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import MetaData
 
-def _get_db_url():
-    # Prefer DATABASE_URL from environment (Render), fallback to INTERNAL_DB_URL (.env)
-    db_url = os.environ.get("DATABASE_URL") or os.environ.get("INTERNAL_DB_URL")
-    if db_url and db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    return db_url or f"sqlite:///{os.path.join(basedir, 'app.db')}"
+# Local imports
 
-class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-key")
-    SQLALCHEMY_DATABASE_URI = _get_db_url()
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+# Instantiate app, set attributes
+app = Flask(__name__)
 
-class DevelopmentConfig(Config):
-    DEBUG = True
+# Database configuration
+if os.environ.get('DATABASE_URL'):
+    # Production database (PostgreSQL on Render)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+else:
+    # Development database (SQLite)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 
-class ProductionConfig(Config):
-    DEBUG = False
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = True
+
+# Define metadata, instantiate db
+metadata = MetaData(naming_convention={
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+})
+db = SQLAlchemy(metadata=metadata)
+migrate = Migrate(app, db)
+db.init_app(app)
+
+# Instantiate REST API
+api = Api(app)
+
+# Instantiate CORS
+CORS(app)
