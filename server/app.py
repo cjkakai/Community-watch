@@ -179,17 +179,31 @@ api.add_resource(CrimeCategoryResource, "/api/categories", "/api/categories/<int
 
 
 # React frontend routes - this should be LAST
+# Replace your React serving routes with this:
+
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_react(path):
-    root_dir = os.path.join(os.getcwd(), "client", "build")
-    if path != "" and os.path.exists(os.path.join(root_dir, path)):
-        return send_from_directory(root_dir, path)
+    import os
+    
+    # Get the directory where this file is located (server folder)
+    server_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Go up one level to project root, then into client/build
+    project_root = os.path.dirname(server_dir)
+    build_dir = os.path.join(project_root, "client", "build")
+    
+    # Check if build directory exists
+    if not os.path.exists(build_dir):
+        return f"Build directory not found at: {build_dir}", 404
+    
+    # Serve static files
+    if path != "" and os.path.exists(os.path.join(build_dir, path)):
+        return send_from_directory(build_dir, path)
     else:
-        return send_from_directory(root_dir, "index.html")
-
-
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(port=5555, debug=True)
+        # Serve index.html for all routes (SPA routing)
+        index_path = os.path.join(build_dir, "index.html")
+        if os.path.exists(index_path):
+            return send_from_directory(build_dir, "index.html")
+        else:
+            return f"index.html not found at: {index_path}", 404
