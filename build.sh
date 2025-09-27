@@ -11,6 +11,10 @@ npm ci --only=production
 npm run build
 cd ..
 
+echo "Setting up database..."
+# Ensure migrations directory exists
+mkdir -p server/migrations
+
 echo "Running database migrations..."
 python migrate_db.py
 
