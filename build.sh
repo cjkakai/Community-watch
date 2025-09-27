@@ -12,8 +12,6 @@ npm run build
 cd ..
 
 echo "Running database migrations..."
-cd server
-flask db upgrade
-cd ..
+python migrate_db.py
 
 echo "Build completed successfully!"

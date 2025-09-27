@@ -15,15 +15,19 @@ from sqlalchemy import MetaData
 app = Flask(__name__)
 
 # Database configuration
-if os.environ.get('DATABASE_URL'):
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
     # Production database (PostgreSQL on Render)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace('postgres://', 'postgresql://')
+    # Handle both postgres:// and postgresql:// schemes
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     # Development database (SQLite)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False  # Set to False for production
 
 # Define metadata, instantiate db
 metadata = MetaData(naming_convention={
