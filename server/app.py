@@ -6,12 +6,15 @@ from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 
-from config import DevelopmentConfig
+from config import DevelopmentConfig, ProductionConfig
 from models import db, bcrypt, PoliceOfficer, CrimeCategory, CrimeReport, Assignment
 from decorators import rank_required, login_required
 
+# Use ProductionConfig on Render, DevelopmentConfig locally
+config = ProductionConfig if os.environ.get('RENDER') else DevelopmentConfig
+
 app = Flask(__name__)
-app.config.from_object(DevelopmentConfig)
+app.config.from_object(config)
 
 db.init_app(app)
 bcrypt.init_app(app)
@@ -19,9 +22,7 @@ migrate = Migrate(app, db)
 api = Api(app)
 CORS(app)
 
-# REMOVED THE CONFLICTING @app.route('/') HERE
-
-@app.route('/api/login', methods=['POST'])  # Added /api prefix
+@app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data.get("email")
@@ -34,7 +35,7 @@ def login():
         return {"message": f"Logged in as {officer.role}"}, 200
     return {"error": "Invalid email or password"}, 401
 
-@app.route('/api/logout', methods=['POST'])  # Added /api prefix
+@app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
     return {"message": "Logged out successfully"}, 200
@@ -178,18 +179,46 @@ api.add_resource(AssignmentResource, "/api/assignments", "/api/assignments/<int:
 api.add_resource(CrimeCategoryResource, "/api/categories", "/api/categories/<int:id>")
 
 
-# React frontend routes - this should be LAST
-# Replace your React serving routes with this:
+# Debug route to check file paths
+@app.route('/debug')
+def debug_info():
+    server_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(server_dir)
+    build_dir = os.path.join(project_root, "client", "build")
+    build_exists = os.path.exists(build_dir)
+    build_contents = []
+    
+    if build_exists:
+        try:
+            build_contents = os.listdir(build_dir)
+        except:
+            build_contents = ["Error reading directory"]
+    
+    return {
+        "server_dir": server_dir,
+        "project_root": project_root,
+        "build_dir": build_dir,
+        "build_exists": build_exists,
+        "build_contents": build_contents[:10],
+    }
 
+# Serve static files (CSS, JS, images)
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    server_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(server_dir)
+    build_dir = os.path.join(project_root, "client", "build")
+    static_dir = os.path.join(build_dir, "static")
+    
+    if os.path.exists(os.path.join(static_dir, filename)):
+        return send_from_directory(static_dir, filename)
+    return "Static file not found", 404
+
+# React frontend routes - this should be LAST
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_react(path):
-    import os
-    
-    # Get the directory where this file is located (server folder)
     server_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Go up one level to project root, then into client/build
     project_root = os.path.dirname(server_dir)
     build_dir = os.path.join(project_root, "client", "build")
     
@@ -197,13 +226,25 @@ def serve_react(path):
     if not os.path.exists(build_dir):
         return f"Build directory not found at: {build_dir}", 404
     
-    # Serve static files
+    # Handle static files (CSS, JS, images, etc.)
+    if path.startswith('static/'):
+        file_path = os.path.join(build_dir, path)
+        if os.path.exists(file_path):
+            return send_from_directory(build_dir, path)
+    
+    # Handle other static assets (favicon, manifest, etc.)
     if path != "" and os.path.exists(os.path.join(build_dir, path)):
         return send_from_directory(build_dir, path)
+    
+    # Serve index.html for all routes (SPA routing)
+    index_path = os.path.join(build_dir, "index.html")
+    if os.path.exists(index_path):
+        return send_from_directory(build_dir, "index.html")
     else:
-        # Serve index.html for all routes (SPA routing)
-        index_path = os.path.join(build_dir, "index.html")
-        if os.path.exists(index_path):
-            return send_from_directory(build_dir, "index.html")
-        else:
-            return f"index.html not found at: {index_path}", 404
+        return f"index.html not found at: {index_path}", 404
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(port=5555, debug=True)
