@@ -6,12 +6,17 @@ from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 
-from config import DevelopmentConfig
+from config import DevelopmentConfig, ProductionConfig
 from models import db, bcrypt, PoliceOfficer, CrimeCategory, CrimeReport, Assignment
 from decorators import admin_required, login_required
 
 app = Flask(__name__)
-app.config.from_object(DevelopmentConfig)
+# Switch config automatically based on environment
+if os.environ.get("FLASK_ENV") == "production":
+    app.config.from_object(ProductionConfig)
+else:
+    app.config.from_object(DevelopmentConfig)
+
 
 db.init_app(app)
 bcrypt.init_app(app)
@@ -189,6 +194,4 @@ def serve_react(path):
 
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(port=5555, debug=True)
