@@ -26,8 +26,8 @@ function Home(){
       .then(([reports,officers,assignments]) => {
         // manipulating the data
         const openReports = reports.filter(r => r.status === 'open').length;
-        const pendingReports = reports.filter(r => r.status == 'pending').length;
-        const closedReports = reports.filter(r => r.status == 'closed').length;
+        const pendingReports = reports.filter(r => r.status === 'pending').length;
+        const closedReports = reports.filter(r => r.status === 'closed').length;
 
         setStats({
           totalReports:reports.length,
