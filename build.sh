@@ -10,15 +10,20 @@ cd client
 npm ci --only=production
 npm run build
 
-# Verify build directory exists and has content
-echo "Verifying React build..."
+# Debug: Show build directory structure
+echo "=== BUILD DIRECTORY STRUCTURE ==="
 ls -la build/
-ls -la build/static/ || echo "No static directory found"
+echo "=== STATIC DIRECTORY ==="
+ls -la build/static/ 2>/dev/null || echo "No static directory found"
+echo "=== CSS FILES ==="
+find build/static -name "*.css" 2>/dev/null || echo "No CSS files found"
+echo "=== JS FILES ==="
+find build/static -name "*.js" 2>/dev/null || echo "No JS files found"
+echo "================================="
 
 cd ..
 
 echo "Setting up database..."
-# Ensure migrations directory exists
 mkdir -p server/migrations
 
 echo "Running database migrations..."

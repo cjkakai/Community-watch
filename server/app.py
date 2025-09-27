@@ -19,9 +19,11 @@ CORS(app)
 # Get the absolute path to the client build directory
 build_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "client", "build")
 
-# Configure Flask to serve static files
-app.static_folder = build_dir
-app.static_url_path = ''
+# Explicit static file serving
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    static_dir = os.path.join(build_dir, 'static')
+    return send_from_directory(static_dir, filename)
 
 # Health check
 @app.route('/health')
@@ -51,15 +53,6 @@ def login():
 @app.route('/logout', methods=['POST'])
 def logout():
     return make_response(jsonify({"message": "Logout successful"}), 200)
-
-# Serve React App - this should be last
-@app.route("/", defaults={"path": ""})
-@app.route("/<path:path>")
-def serve_react(path):
-    if path != "" and os.path.exists(os.path.join(build_dir, path)):
-        return send_from_directory(build_dir, path)
-    else:
-        return send_from_directory(build_dir, "index.html")
 
 # Resource classes
 class PoliceOfficerResource(Resource):
@@ -211,6 +204,15 @@ api.add_resource(PoliceOfficerResource, "/officers", "/officers/<int:id>")
 api.add_resource(CrimeReportResource, "/reports", "/reports/<int:id>")
 api.add_resource(AssignmentResource, "/assignments", "/assignments/<int:id>")
 api.add_resource(CrimeCategoryResource, "/categories", "/categories/<int:id>")
+
+# Serve React App - this should be last
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_react(path):
+    if path != "" and os.path.exists(os.path.join(build_dir, path)):
+        return send_from_directory(build_dir, path)
+    else:
+        return send_from_directory(build_dir, "index.html")
 
 if __name__ == '__main__':
     app.run(port=5555, debug=True)

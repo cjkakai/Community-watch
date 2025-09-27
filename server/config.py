@@ -9,16 +9,18 @@ from flask_restful import Api
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 
-# Local imports
+# Get the absolute path to the client build directory
+build_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "client", "build")
 
-# Instantiate app, set attributes
-app = Flask(__name__)
+# Instantiate app with static configuration
+app = Flask(__name__, 
+           static_folder=build_dir,
+           static_url_path='')
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
     # Production database (PostgreSQL on Render)
-    # Handle both postgres:// and postgresql:// schemes
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
@@ -27,7 +29,7 @@ else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ECHO'] = False  # Set to False for production
+app.config['SQLALCHEMY_ECHO'] = False
 
 # Define metadata, instantiate db
 metadata = MetaData(naming_convention={
