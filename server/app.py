@@ -214,7 +214,6 @@ def serve_static(filename):
         return send_from_directory(static_dir, filename)
     return "Static file not found", 404
 
-# React frontend routes - this should be LAST
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_react(path):
@@ -222,29 +221,9 @@ def serve_react(path):
     project_root = os.path.dirname(server_dir)
     build_dir = os.path.join(project_root, "client", "build")
     
-    # Check if build directory exists
-    if not os.path.exists(build_dir):
-        return f"Build directory not found at: {build_dir}", 404
-    
-    # Handle static files (CSS, JS, images, etc.)
-    if path.startswith('static/'):
-        file_path = os.path.join(build_dir, path)
-        if os.path.exists(file_path):
-            return send_from_directory(build_dir, path)
-    
-    # Handle other static assets (favicon, manifest, etc.)
+    # Serve other assets (favicon, manifest, etc.)
     if path != "" and os.path.exists(os.path.join(build_dir, path)):
         return send_from_directory(build_dir, path)
     
-    # Serve index.html for all routes (SPA routing)
-    index_path = os.path.join(build_dir, "index.html")
-    if os.path.exists(index_path):
-        return send_from_directory(build_dir, "index.html")
-    else:
-        return f"index.html not found at: {index_path}", 404
-
-
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(port=5555, debug=True)
+    # Default to index.html for React routing
+    return send_from_directory(build_dir, "index.html")
