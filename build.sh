@@ -9,6 +9,12 @@ echo "Installing Node.js dependencies and building React app..."
 cd client
 npm ci --only=production
 npm run build
+
+# Verify build directory exists and has content
+echo "Verifying React build..."
+ls -la build/
+ls -la build/static/ || echo "No static directory found"
+
 cd ..
 
 echo "Setting up database..."
