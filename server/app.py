@@ -4,7 +4,7 @@
 import os
 
 # Remote library imports
-from flask import Flask, request, make_response, jsonify, send_from_directory
+from flask import Flask, request, make_response, jsonify, send_from_directory, session
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_cors import CORS
@@ -49,8 +49,7 @@ def login():
     
     if officer and officer.authenticate(password):
         session["user_id"] = officer.id
-        session["rank"] = officer.rank   
-
+        session["rank"] = officer.rank
         return make_response(jsonify({
             "message": "Login successful",
             "officer": officer.to_dict()
