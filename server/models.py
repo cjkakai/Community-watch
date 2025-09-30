@@ -2,8 +2,12 @@ from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy import MetaData
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
 
 from config import db
+
+# Initialize bcrypt
+bcrypt = Bcrypt()
 
 # Models
 class PoliceOfficer(db.Model, SerializerMixin):

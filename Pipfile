@@ -12,8 +12,10 @@ flask-migrate = "*"
 sqlalchemy-serializer = "*"
 flask-restful = "*"
 flask-cors = "*"
+flask-bcrypt = "*"
 faker = "*"
 python-dotenv = "*"
+gunicorn = "*"
 
 [requires]
 python_full_version = "3.8.13"

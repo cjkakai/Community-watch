@@ -12,11 +12,14 @@ from flask_cors import CORS
 
 # Local imports
 from config import app, db, api
-from models import db, bcrypt, PoliceOfficer, CrimeReport, Assignment, CrimeCategory
+from models import PoliceOfficer, CrimeReport, Assignment, CrimeCategory
 from decorators import rank_required, login_required
 
 # Add CORS
 CORS(app)
+
+# Set secret key for sessions
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Get the absolute path to the client build directory
 build_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "client", "build")

@@ -1,5 +1,9 @@
 # Phase 4 Full-Stack Application Project Template
 
+## Live Demo
+
+🌐 **Visit the live application:** [https://community-watch-wdj0.onrender.com/](https://community-watch-wdj0.onrender.com/)
+
 ## Learning Goals
 
 - Discuss the basic directory structure of a full-stack Flask/React application.
