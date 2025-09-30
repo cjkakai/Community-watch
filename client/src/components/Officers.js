@@ -10,7 +10,7 @@ function Officers() {
   const [officers, setOfficers] = useState([]);
   const [assignments, setAssignments] = useState([]);
 
-  const [selectedRole, setSelectedRole] = useState("all");
+  const [selectedRank, setSelectedRank] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOfficer, setSelectedOfficer] = useState(null);
 
@@ -43,8 +43,8 @@ function Officers() {
   // Filter officers based on selected filters
   let filteredOfficers = officers;
 
-  if (selectedRole !== "all") {
-    filteredOfficers = filteredOfficers.filter(officer => officer.role === selectedRole);
+  if (selectedRank !== "all") {
+    filteredOfficers = filteredOfficers.filter(officer => officer.rank === selectedRank);
   }
 
   if (searchTerm) {
@@ -86,13 +86,15 @@ function Officers() {
 
         <div className="flex gap-4">
           <select
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
+            value={selectedRank}
+            onChange={(e) => setSelectedRank(e.target.value)}
             className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white min-w-32"
           >
-            <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="officer">Officer</option>
+            <option value="all">All Ranks</option>
+            <option value="constable">Constable</option>
+            <option value="sergeant">Sergeant</option>
+            <option value="inspector">Inspector</option>
+            <option value="chief">Chief</option>
           </select>
         </div>
       </div>
@@ -116,9 +118,9 @@ function Officers() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-slate-900 mb-1">{officer.name}</h3>
-                  <p className="text-slate-600 text-sm mb-2">{officer.rank}</p>
-                  <span className={`role-badge role-${officer.role}`}>
-                    {officer.role.toUpperCase()}
+                  <p className="text-slate-600 text-sm mb-2">{officer.role}</p>
+                  <span className={`role-badge role-${officer.rank}`}>
+                    {officer.rank.toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -176,9 +178,9 @@ function Officers() {
                 </div>
                 <div>
                   <h3 className="text-2xl font-semibold text-slate-900 mb-1">{selectedOfficer.name}</h3>
-                  <p className="text-slate-600 text-base mb-2">{selectedOfficer.rank}</p>
-                  <span className={`role-badge role-${selectedOfficer.role}`}>
-                    {selectedOfficer.role.toUpperCase()}
+                  <p className="text-slate-600 text-base mb-2">{selectedOfficer.role}</p>
+                  <span className={`role-badge role-${selectedOfficer.rank}`}>
+                    {selectedOfficer.rank.toUpperCase()}
                   </span>
                 </div>
               </div>
@@ -235,7 +237,7 @@ function Officers() {
               <button className="btn btn-secondary" onClick={closeModal}>
                 Close
               </button>
-              {user.role === 'admin' && (
+              {user.rank === 'inspector' && (
                 <>
                   <button className="btn btn-primary">Edit Officer</button>
                   <button className="btn btn-warning">Assign to Case</button>
