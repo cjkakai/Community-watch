@@ -10,6 +10,9 @@ function Assignments() {
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [editForm, setEditForm] = useState({});
 
+  // filter state
+  const [officerFilter, setOfficerFilter] = useState("");
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -17,38 +20,38 @@ function Assignments() {
   const fetchData = async () => {
     try {
       const [assignmentsRes, officersRes, reportsRes] = await Promise.all([
-        fetch('/assignments'),
-        fetch('/officers'),
-        fetch('/reports')
+        fetch("/assignments"),
+        fetch("/officers"),
+        fetch("/reports"),
       ]);
 
       const [assignmentsData, officersData, reportsData] = await Promise.all([
         assignmentsRes.json(),
         officersRes.json(),
-        reportsRes.json()
+        reportsRes.json(),
       ]);
 
       setAssignments(assignmentsData);
       setOfficers(officersData);
       setReports(reportsData);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     }
   };
 
   const handleDelete = async (assignmentId) => {
-    if (!window.confirm('Are you sure you want to delete this assignment?')) return;
+    if (!window.confirm("Are you sure you want to delete this assignment?")) return;
 
     try {
       const response = await fetch(`/assignments/${assignmentId}`, {
-        method: 'DELETE'
+        method: "DELETE",
       });
 
       if (response.ok) {
-        setAssignments(assignments.filter(assignment => assignment.id !== assignmentId));
+        setAssignments(assignments.filter((assignment) => assignment.id !== assignmentId));
       }
     } catch (error) {
-      console.error('Error deleting assignment:', error);
+      console.error("Error deleting assignment:", error);
     }
   };
 
@@ -57,41 +60,48 @@ function Assignments() {
     setEditForm({
       role_in_case: assignment.role_in_case,
       officer_id: assignment.officer_id,
-      crime_report_id: assignment.crime_report_id
+      crime_report_id: assignment.crime_report_id,
     });
   };
 
   const handleUpdate = async (assignmentId) => {
     try {
       const response = await fetch(`/assignments/${assignmentId}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify(editForm),
       });
 
       if (response.ok) {
         const updatedAssignment = await response.json();
-        setAssignments(assignments.map(assignment => 
-          assignment.id === assignmentId ? updatedAssignment : assignment
-        ));
+        setAssignments(
+          assignments.map((assignment) =>
+            assignment.id === assignmentId ? updatedAssignment : assignment
+          )
+        );
         setEditingAssignment(null);
       }
     } catch (error) {
-      console.error('Error updating assignment:', error);
+      console.error("Error updating assignment:", error);
     }
   };
 
   const getOfficerName = (officerId) => {
-    const officer = officers.find(off => off.id === officerId);
-    return officer ? officer.name : 'Unknown Officer';
+    const officer = officers.find((off) => off.id === officerId);
+    return officer ? officer.name : "Unknown Officer";
   };
 
   const getReportTitle = (reportId) => {
-    const report = reports.find(rep => rep.id === reportId);
-    return report ? report.title : 'Unknown Report';
+    const report = reports.find((rep) => rep.id === reportId);
+    return report ? report.title : "Unknown Report";
   };
+
+  // filter assignments by officer
+  const filteredAssignments = assignments.filter(
+    (assignment) => officerFilter === "" || assignment.officer_id === parseInt(officerFilter)
+  );
 
   if (!user) {
     return <div>Please log in to view assignments.</div>;
@@ -104,6 +114,23 @@ function Assignments() {
         <Link to="/assignments/new" className="btn btn-primary">
           New Assignment
         </Link>
+      </div>
+
+      {/* Officer Filter */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-slate-700 mb-2">Filter by Officer</label>
+        <select
+          value={officerFilter}
+          onChange={(e) => setOfficerFilter(e.target.value)}
+          className="px-3 py-2 border border-slate-300 rounded-md"
+        >
+          <option value="">All Officers</option>
+          {officers.map((officer) => (
+            <option key={officer.id} value={officer.id}>
+              {officer.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-slate-200">
@@ -133,17 +160,19 @@ function Assignments() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {assignments.map(assignment => (
+              {filteredAssignments.map((assignment) => (
                 <tr key={assignment.id} className="hover:bg-slate-50">
                   {editingAssignment === assignment.id ? (
                     <>
                       <td className="px-6 py-4">
                         <select
                           value={editForm.officer_id}
-                          onChange={(e) => setEditForm({...editForm, officer_id: parseInt(e.target.value)})}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, officer_id: parseInt(e.target.value) })
+                          }
                           className="w-full px-3 py-2 border border-slate-300 rounded-md"
                         >
-                          {officers.map(officer => (
+                          {officers.map((officer) => (
                             <option key={officer.id} value={officer.id}>
                               {officer.name}
                             </option>
@@ -153,10 +182,12 @@ function Assignments() {
                       <td className="px-6 py-4">
                         <select
                           value={editForm.crime_report_id}
-                          onChange={(e) => setEditForm({...editForm, crime_report_id: parseInt(e.target.value)})}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, crime_report_id: parseInt(e.target.value) })
+                          }
                           className="w-full px-3 py-2 border border-slate-300 rounded-md"
                         >
-                          {reports.map(report => (
+                          {reports.map((report) => (
                             <option key={report.id} value={report.id}>
                               {report.title}
                             </option>
@@ -167,7 +198,9 @@ function Assignments() {
                         <input
                           type="text"
                           value={editForm.role_in_case}
-                          onChange={(e) => setEditForm({...editForm, role_in_case: e.target.value})}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, role_in_case: e.target.value })
+                          }
                           className="w-full px-3 py-2 border border-slate-300 rounded-md"
                         />
                       </td>
@@ -238,9 +271,12 @@ function Assignments() {
             </tbody>
           </table>
 
-          {assignments.length === 0 && (
+          {filteredAssignments.length === 0 && (
             <div className="text-center py-8 text-slate-500">
-              No assignments found. <Link to="/assignments/new" className="text-primary-600 hover:text-primary-700">Create one</Link>
+              No assignments match this filter.{" "}
+              <Link to="/assignments/new" className="text-primary-600 hover:text-primary-700">
+                Create one
+              </Link>
             </div>
           )}
         </div>

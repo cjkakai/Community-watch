@@ -11,6 +11,11 @@ function CrimeReports() {
   const [editingReport, setEditingReport] = useState(null);
   const [editForm, setEditForm] = useState({});
 
+  // filter states
+  const [locationFilter, setLocationFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -106,6 +111,14 @@ function CrimeReports() {
     }
   };
 
+  // apply filters
+  const filteredReports = reports.filter(report => {
+    const matchesLocation = locationFilter === "" || report.location.toLowerCase().includes(locationFilter.toLowerCase());
+    const matchesStatus = statusFilter === "" || report.status === statusFilter;
+    const matchesCategory = categoryFilter === "" || report.crime_category_id === parseInt(categoryFilter);
+    return matchesLocation && matchesStatus && matchesCategory;
+  });
+
   if (!user) {
     return <div>Please log in to view reports.</div>;
   }
@@ -119,13 +132,45 @@ function CrimeReports() {
         </Link>
       </div>
 
+      {/* Filter Controls */}
+      <div className="flex gap-4 mb-6">
+        <input
+          type="text"
+          placeholder="Filter by location"
+          value={locationFilter}
+          onChange={(e) => setLocationFilter(e.target.value)}
+          className="px-3 py-2 border border-slate-300 rounded-md"
+        />
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-slate-300 rounded-md"
+        >
+          <option value="">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="pending">Pending</option>
+          <option value="closed">Closed</option>
+        </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="px-3 py-2 border border-slate-300 rounded-md"
+        >
+          <option value="">All Categories</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Reports List */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
           <div className="p-6 border-b border-slate-200">
             <h2 className="text-xl font-semibold text-slate-900">All Reports</h2>
           </div>
           <div className="divide-y divide-slate-200 max-h-96 overflow-y-auto">
-            {reports.map(report => (
+            {filteredReports.map(report => (
               <div
                 key={report.id}
                 className={`p-4 cursor-pointer hover:bg-slate-50 ${
@@ -146,6 +191,9 @@ function CrimeReports() {
                 </div>
               </div>
             ))}
+            {filteredReports.length === 0 && (
+              <div className="p-4 text-slate-500 text-sm">No reports match your filters.</div>
+            )}
           </div>
         </div>
 
