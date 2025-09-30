@@ -29,9 +29,19 @@ class PoliceOfficer(db.Model, SerializerMixin):
     # Relationships
     assignments = db.relationship('Assignment', back_populates='officer', cascade='all, delete-orphan')
     
+    @property
+    def password(self):
+        raise AttributeError('Password is not readable')
+    
+    @password.setter
+    def password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    
     def authenticate(self, password):
-        # Simple password check - in production, use proper hashing
-        return self.password_hash == password
+        return bcrypt.check_password_hash(self.password_hash, password)
+    
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
 
 class CrimeCategory(db.Model, SerializerMixin):
     __tablename__ = 'crime_categories'

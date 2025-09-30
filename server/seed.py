@@ -26,7 +26,7 @@ if __name__ == "__main__":
                 phone=fake.unique.msisdn()[:10],
                 role=rc(roles)
             )
-            officer.set_password("password123")
+            officer.password = "password123"  # Use the password setter
             db.session.add(officer)
             officers.append(officer)
 
@@ -36,28 +36,5 @@ if __name__ == "__main__":
             db.session.add(category)
             categories.append(category)
 
-
-        reports = []
-        for _ in range(15):
-            report = CrimeReport(
-                title=fake.sentence(nb_words=4),
-                description=fake.paragraph(),
-                location=fake.city(),
-                status=rc(["open", "closed", "pending"]),
-                crime_category=rc(categories)
-            )
-            db.session.add(report)
-            reports.append(report)
-
-        for report in reports:
-            assigned_officers = sample(officers, k=randint(1, min(3, len(officers))))
-            for officer in assigned_officers:
-                assignment = Assignment(
-                    role_in_case=rc(["Lead Investigator", "Support Officer"]),
-                    crime_report=report,
-                    officer=officer
-                )
-                db.session.add(assignment)
-
         db.session.commit()
-        print("Seeding complete!")
+        print("Seeding completed!")

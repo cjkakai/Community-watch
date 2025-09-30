@@ -59,6 +59,20 @@ def login():
 def logout():
     return make_response(jsonify({"message": "Logout successful"}), 200)
 
+# Add error handlers to prevent crashes
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return make_response(jsonify({"error": "Internal server error"}), 500)
+
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({"error": "Resource not found"}), 404)
+
+@app.errorhandler(400)
+def bad_request(error):
+    return make_response(jsonify({"error": "Bad request"}), 400)
+
 # Resource classes
 class PoliceOfficerResource(Resource):
     def get(self, id=None):
@@ -73,6 +87,18 @@ class PoliceOfficerResource(Resource):
         data = request.get_json()
         
         try:
+            # Check if officer with same email or badge number exists
+            existing_officer = PoliceOfficer.query.filter(
+                (PoliceOfficer.email == data['email']) | 
+                (PoliceOfficer.badge_number == data['badge_number'])
+            ).first()
+            
+            if existing_officer:
+                if existing_officer.email == data['email']:
+                    return make_response(jsonify({"error": "Email already exists"}), 400)
+                else:
+                    return make_response(jsonify({"error": "Badge number already exists"}), 400)
+            
             new_officer = PoliceOfficer(
                 name=data['name'],
                 badge_number=data['badge_number'],
@@ -81,14 +107,20 @@ class PoliceOfficerResource(Resource):
                 phone=data['phone'],
                 role=data.get('role', 'officer')
             )
-            new_officer.password_hash = data['password']
+            
+            # Use the password setter which handles hashing
+            new_officer.password = data['password']
             
             db.session.add(new_officer)
             db.session.commit()
             
             return make_response(jsonify(new_officer.to_dict()), 201)
+            
+        except KeyError as e:
+            return make_response(jsonify({"error": f"Missing required field: {str(e)}"}), 400)
         except Exception as e:
-            return make_response(jsonify({"error": str(e)}), 400)
+            db.session.rollback()
+            return make_response(jsonify({"error": f"Database error: {str(e)}"}), 500)
     
     def patch(self, id):
         officer = PoliceOfficer.query.get_or_404(id)
