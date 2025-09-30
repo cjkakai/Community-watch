@@ -47,11 +47,17 @@ def login():
     
     officer = PoliceOfficer.query.filter_by(email=email).first()
     
-    if officer and officer.check_password(password):
+    if officer and officer.authenticate(password):
         session["user_id"] = officer.id
-        session["rank"] = officer.rank
-        return {"message": f"Logged in as {officer.rank}"}, 200
-    return {"error": "Invalid email or password"}, 401
+        session["rank"] = officer.rank   
+
+        return make_response(jsonify({
+            "message": "Login successful",
+            "officer": officer.to_dict()
+        }), 200)
+    else:
+        return make_response(jsonify({"error": "Invalid credentials"}), 401)
+
 
 @app.route('/logout', methods=['POST'])
 def logout():
