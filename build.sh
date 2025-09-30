@@ -29,4 +29,10 @@ mkdir -p server/migrations
 echo "Running database migrations..."
 python migrate_db.py
 
+echo "Seeding DB with officers and crime type data ..."
+cd server
+python seed.py
+cd ..
+
+
 echo "Build completed successfully!"
