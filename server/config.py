@@ -1,28 +1,53 @@
+# Standard library imports
 import os
-from dotenv import load_dotenv
 
-# Load .env for local development
-basedir = os.path.abspath(os.path.dirname(__file__))
-load_dotenv(os.path.join(basedir, ".env"))
+# Remote library imports
+from flask import Flask
+from flask_cors import CORS
+from flask_migrate import Migrate
+from flask_restful import Api
+from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from sqlalchemy import MetaData
 
-class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-key")
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+# Get the absolute path to the client build directory
+build_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "client", "build")
 
+# Instantiate app with static configuration
+app = Flask(__name__, 
+           static_folder=build_dir,
+           static_url_path='')
 
-class DevelopmentConfig(Config):
-    DEBUG = True
-    # Use DATABASE_URL if defined, otherwise fallback to local SQLite
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        f"sqlite:///{os.path.join(basedir, 'app.db')}"
-    )
+# Set secret key for sessions
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+# Database configuration
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Production database (PostgreSQL on Render)
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Development database (SQLite)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 
-class ProductionConfig(Config):
-    DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
-    if not SQLALCHEMY_DATABASE_URI:
-        raise ValueError(
-            "DATABASE_URL environment variable not set! You must set it on Render."
-        )
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = False
+
+# Define metadata, instantiate db
+metadata = MetaData(naming_convention={
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+})
+db = SQLAlchemy(metadata=metadata)
+migrate = Migrate(app, db)
+db.init_app(app)
+
+# Initialize bcrypt
+bcrypt = Bcrypt(app)
+
+# Instantiate REST API
+api = Api(app)
+
+# Instantiate CORS
+CORS(app)

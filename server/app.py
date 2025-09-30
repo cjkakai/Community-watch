@@ -1,132 +1,193 @@
 #!/usr/bin/env python3
+
+# Standard library imports
 import os
-from flask import Flask, jsonify, request, session, send_from_directory
+
+# Remote library imports
+from flask import Flask, request, make_response, jsonify, send_from_directory, session
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
-from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 
-from config import DevelopmentConfig, ProductionConfig
-from models import db, bcrypt, PoliceOfficer, CrimeCategory, CrimeReport, Assignment
+# Local imports
+from config import app, db, api
+from models import PoliceOfficer, CrimeReport, Assignment, CrimeCategory
 from decorators import rank_required, login_required
 
-# Use ProductionConfig on Render, DevelopmentConfig locally
-config = ProductionConfig if os.environ.get('RENDER') else DevelopmentConfig
-
-app = Flask(__name__)
-app.config.from_object(config)
-
-db.init_app(app)
-bcrypt.init_app(app)
-migrate = Migrate(app, db)
-api = Api(app)
+# Add CORS
 CORS(app)
 
-@app.route('/api/login', methods=['POST'])
+
+# Set secret key for sessions
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Get the absolute path to the client build directory
+build_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "client", "build")
+
+# Explicit static file serving
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    static_dir = os.path.join(build_dir, 'static')
+    return send_from_directory(static_dir, filename)
+
+# Health check
+@app.route('/health')
+def health_check():
+    return make_response(jsonify({"status": "healthy", "message": "Community Watch API is running"}), 200)
+
+# Authentication routes
+@app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
-
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not email or not password:
+        return make_response(jsonify({"error": "Email and password required"}), 400)
+    
     officer = PoliceOfficer.query.filter_by(email=email).first()
-    if officer and officer.check_password(password):
+    
+    if officer and officer.authenticate(password):
         session["user_id"] = officer.id
-        session["role"] = officer.role
-        return {"message": f"Logged in as {officer.role}"}, 200
-    return {"error": "Invalid email or password"}, 401
+        session["rank"] = officer.rank
+        return make_response(jsonify({
+            "message": "Login successful",
+            "officer": officer.to_dict()
+        }), 200)
+    else:
+        return make_response(jsonify({"error": "Invalid credentials"}), 401)
+
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
-    session.clear()
-    return {"message": "Logged out successfully"}, 200
+    return make_response(jsonify({"message": "Logout successful"}), 200)
 
+# Add error handlers to prevent crashes
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    return make_response(jsonify({"error": "Internal server error"}), 500)
 
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify({"error": "Resource not found"}), 404)
+
+@app.errorhandler(400)
+def bad_request(error):
+    return make_response(jsonify({"error": "Bad request"}), 400)
+
+# Resource classes
 class PoliceOfficerResource(Resource):
     def get(self, id=None):
         if id:
             officer = PoliceOfficer.query.get_or_404(id)
-            return officer.to_dict()
-        officers = PoliceOfficer.query.all()
-        return [o.to_dict() for o in officers], 200
-
+            return make_response(jsonify(officer.to_dict()), 200)
+        else:
+            officers = [officer.to_dict() for officer in PoliceOfficer.query.all()]
+            return make_response(jsonify(officers), 200)
+    
     def post(self):
         data = request.get_json()
+        
         try:
-            officer = PoliceOfficer(
-                name=data["name"],
-                badge_number=data["badge_number"],
-                rank=data["rank"],
-                email=data["email"],
-                phone=data["phone"],
-                role=data.get("role", "officer")
+            # Check if officer with same email or badge number exists
+            existing_officer = PoliceOfficer.query.filter(
+                (PoliceOfficer.email == data['email']) | 
+                (PoliceOfficer.badge_number == data['badge_number'])
+            ).first()
+            
+            if existing_officer:
+                if existing_officer.email == data['email']:
+                    return make_response(jsonify({"error": "Email already exists"}), 400)
+                else:
+                    return make_response(jsonify({"error": "Badge number already exists"}), 400)
+            
+            new_officer = PoliceOfficer(
+                name=data['name'],
+                badge_number=data['badge_number'],
+                rank=data['rank'],
+                email=data['email'],
+                phone=data['phone'],
+                role=data.get('role', 'officer')
             )
-            officer.set_password(data["password"])
-            db.session.add(officer)
+            
+            # Use the password setter which handles hashing
+            new_officer.password = data['password']
+            
+            db.session.add(new_officer)
             db.session.commit()
-            return officer.to_dict(), 201
+            
+            return make_response(jsonify(new_officer.to_dict()), 201)
+            
+        except KeyError as e:
+            return make_response(jsonify({"error": f"Missing required field: {str(e)}"}), 400)
         except Exception as e:
             db.session.rollback()
-            return {"error": str(e)}, 400
-
+            return make_response(jsonify({"error": f"Database error: {str(e)}"}), 500)
+    
     def patch(self, id):
         officer = PoliceOfficer.query.get_or_404(id)
         data = request.get_json()
-        for field, value in data.items():
-            if field == "password":
-                officer.set_password(value)
-            else:
-                setattr(officer, field, value)
+        
+        for key, value in data.items():
+            if hasattr(officer, key) and key != 'id':
+                setattr(officer, key, value)
+        
         db.session.commit()
         return officer.to_dict()
 
     @rank_required
+
     def delete(self, id):
         officer = PoliceOfficer.query.get_or_404(id)
         db.session.delete(officer)
         db.session.commit()
-        return {"message": "Officer deleted successfully"}, 204
-
+        return make_response(jsonify({"message": "Officer deleted"}), 200)
 
 class CrimeReportResource(Resource):
     def get(self, id=None):
         if id:
             report = CrimeReport.query.get_or_404(id)
-            return report.to_dict()
-        reports = CrimeReport.query.all()
-        return [r.to_dict() for r in reports], 200
-
-    @login_required
+            return make_response(jsonify(report.to_dict()), 200)
+        else:
+            reports = [report.to_dict() for report in CrimeReport.query.all()]
+            return make_response(jsonify(reports), 200)
+    
     def post(self):
         data = request.get_json()
+        
         try:
-            report = CrimeReport(
-                title=data.get("title"),
-                description=data.get("description"),
-                location=data.get("location"),
-                status=data.get("status", "open"),
-                crime_category_id=data["crime_category_id"]
+            new_report = CrimeReport(
+                title=data['title'],
+                description=data['description'],
+                location=data['location'],
+                crime_category_id=data['crime_category_id'],
+                status=data.get('status', 'open')
             )
-            db.session.add(report)
+            
+            db.session.add(new_report)
             db.session.commit()
-            return report.to_dict(), 201
+            
+            return make_response(jsonify(new_report.to_dict()), 201)
         except Exception as e:
-            db.session.rollback()
-            return {"error": str(e)}, 400
-
+            return make_response(jsonify({"error": str(e)}), 400)
+    
     def patch(self, id):
         report = CrimeReport.query.get_or_404(id)
         data = request.get_json()
-        for field, value in data.items():
-            setattr(report, field, value)
+        
+        for key, value in data.items():
+            if hasattr(report, key) and key != 'id':
+                setattr(report, key, value)
+        
         db.session.commit()
-        return report.to_dict()
-
+        return make_response(jsonify(report.to_dict()), 200)
+    
     def delete(self, id):
         report = CrimeReport.query.get_or_404(id)
         db.session.delete(report)
         db.session.commit()
-        return {"message": "Report deleted"}, 204
-
+        return make_response(jsonify({"message": "Report deleted"}), 200)
 
 class AssignmentResource(Resource):
     def get(self, id=None):
@@ -137,125 +198,64 @@ class AssignmentResource(Resource):
         return [a.to_dict() for a in assignments], 200
     
     @rank_required
+    
     def post(self):
         data = request.get_json()
+        
         try:
-            assignment = Assignment(
-                role_in_case=data["role_in_case"],
-                crime_report_id=data["crime_report_id"],
-                officer_id=data["officer_id"],
+            new_assignment = Assignment(
+                officer_id=data['officer_id'],
+                crime_report_id=data['crime_report_id'],
+                role_in_case=data['role_in_case']
             )
-            db.session.add(assignment)
+            
+            db.session.add(new_assignment)
             db.session.commit()
-            return assignment.to_dict(), 201
+            
+            return make_response(jsonify(new_assignment.to_dict()), 201)
         except Exception as e:
-            db.session.rollback()
-            return {"error": str(e)}, 400
-
+            return make_response(jsonify({"error": str(e)}), 400)
+    
+    def patch(self, id):
+        assignment = Assignment.query.get_or_404(id)
+        data = request.get_json()
+        
+        for key, value in data.items():
+            if hasattr(assignment, key) and key != 'id':
+                setattr(assignment, key, value)
+        
+        db.session.commit()
+        return make_response(jsonify(assignment.to_dict()), 200)
+    
+    def delete(self, id):
+        assignment = Assignment.query.get_or_404(id)
+        db.session.delete(assignment)
+        db.session.commit()
+        return make_response(jsonify({"message": "Assignment deleted"}), 200)
 
 class CrimeCategoryResource(Resource):
     def get(self, id=None):
         if id:
             category = CrimeCategory.query.get_or_404(id)
-            return category.to_dict()
-        categories = CrimeCategory.query.all()
-        return [c.to_dict() for c in categories], 200
+            return make_response(jsonify(category.to_dict()), 200)
+        else:
+            categories = [category.to_dict() for category in CrimeCategory.query.all()]
+            return make_response(jsonify(categories), 200)
 
-    def post(self):
-        data = request.get_json()
-        try:
-            category = CrimeCategory(name=data["name"])
-            db.session.add(category)
-            db.session.commit()
-            return category.to_dict(), 201
-        except Exception as e:
-            db.session.rollback()
-            return {"error": str(e)}, 400
+# Add resources to API
+api.add_resource(PoliceOfficerResource, "/officers", "/officers/<int:id>")
+api.add_resource(CrimeReportResource, "/reports", "/reports/<int:id>")
+api.add_resource(AssignmentResource, "/assignments", "/assignments/<int:id>")
+api.add_resource(CrimeCategoryResource, "/categories", "/categories/<int:id>")
 
-# Add /api prefix to all API resources
-api.add_resource(PoliceOfficerResource, "/api/officers", "/api/officers/<int:id>")
-api.add_resource(CrimeReportResource, "/api/reports", "/api/reports/<int:id>")
-api.add_resource(AssignmentResource, "/api/assignments", "/api/assignments/<int:id>")
-api.add_resource(CrimeCategoryResource, "/api/categories", "/api/categories/<int:id>")
-
-
-# Debug route to check file paths
-@app.route('/debug')
-def debug_info():
-    server_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(server_dir)
-    build_dir = os.path.join(project_root, "client", "build")
-    static_dir = os.path.join(build_dir, "static")
-    build_exists = os.path.exists(build_dir)
-    static_exists = os.path.exists(static_dir)
-    
-    build_contents = []
-    static_contents = []
-    
-    if build_exists:
-        try:
-            build_contents = os.listdir(build_dir)
-        except:
-            build_contents = ["Error reading build directory"]
-    
-    if static_exists:
-        try:
-            static_contents = os.listdir(static_dir)
-        except:
-            static_contents = ["Error reading static directory"]
-    
-    return {
-        "server_dir": server_dir,
-        "project_root": project_root,
-        "build_dir": build_dir,
-        "static_dir": static_dir,
-        "build_exists": build_exists,
-        "static_exists": static_exists,
-        "build_contents": build_contents,
-        "static_contents": static_contents,
-    }
-
-# Serve static files (CSS, JS, images)
-@app.route("/static/<path:filename>")
-def serve_static(filename):
-    server_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(server_dir)
-    build_dir = os.path.join(project_root, "client", "build")
-    
-    # Serve from build/static/ directory
-    return send_from_directory(os.path.join(build_dir, "static"), filename)
-
-# React frontend routes - this should be LAST
+# Serve React App - this should be last
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_react(path):
-    server_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(server_dir)
-    build_dir = os.path.join(project_root, "client", "build")
-    
-    # Check if build directory exists
-    if not os.path.exists(build_dir):
-        return f"Build directory not found at: {build_dir}", 404
-    
-    # Handle static files (CSS, JS, images, etc.)
-    if path.startswith('static/'):
-        file_path = os.path.join(build_dir, path)
-        if os.path.exists(file_path):
-            return send_from_directory(build_dir, path)
-    
-    # Handle other static assets (favicon, manifest, etc.)
     if path != "" and os.path.exists(os.path.join(build_dir, path)):
         return send_from_directory(build_dir, path)
-    
-    # Serve index.html for all routes (SPA routing)
-    index_path = os.path.join(build_dir, "index.html")
-    if os.path.exists(index_path):
-        return send_from_directory(build_dir, "index.html")
     else:
-        return f"index.html not found at: {index_path}", 404
-
+        return send_from_directory(build_dir, "index.html")
 
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(port=5555, debug=True)

@@ -73,12 +73,20 @@
     @apply inline-block px-2 py-1 rounded text-xs font-semibold uppercase tracking-wide;
   }
 
-  .role-admin {
+  .role-Sergeant {
     @apply bg-purple-50 text-purple-600 border border-purple-200;
   }
 
-  .role-officer {
+  .role-Chief {
     @apply bg-blue-50 text-blue-600 border border-blue-200;
+  }
+
+  .role-Inspector {
+    @apply bg-red-50 text-red-600 border border-red-200;
+  }
+
+  .role-Constable {
+    @apply bg-green-50 text-green-600 border border-green-200;
   }
 
   .form-group {

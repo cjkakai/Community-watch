@@ -112,7 +112,7 @@ function Home() {
                 <div className="flex-1">
                   <h4 className="text-sm font-semibold mb-1">{report.title}</h4>
                   <p className="text-xs text-slate-400">{report.location}</p>
-                  <p className="text-xs text-slate-500">{report.crime_category.name}</p>
+                  <p className="text-xs text-slate-500">{report.category?.name}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <span
