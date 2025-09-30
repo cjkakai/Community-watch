@@ -91,10 +91,10 @@ function Officers() {
             className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white min-w-32"
           >
             <option value="all">All Ranks</option>
-            <option value="constable">Constable</option>
-            <option value="sergeant">Sergeant</option>
-            <option value="inspector">Inspector</option>
-            <option value="chief">Chief</option>
+            <option value="Constable">Constable</option>
+            <option value="Sergeant">Sergeant</option>
+            <option value="Inspector">Inspector</option>
+            <option value="Chief">Chief</option>
           </select>
         </div>
       </div>
