@@ -9,9 +9,11 @@ from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_cors import CORS
 
+
 # Local imports
 from config import app, db, api
-from models import PoliceOfficer, CrimeReport, Assignment, CrimeCategory
+from models import db, bcrypt, PoliceOfficer, CrimeReport, Assignment, CrimeCategory
+from decorators import rank_required, login_required
 
 # Add CORS
 CORS(app)
@@ -94,8 +96,10 @@ class PoliceOfficerResource(Resource):
                 setattr(officer, key, value)
         
         db.session.commit()
-        return make_response(jsonify(officer.to_dict()), 200)
-    
+        return officer.to_dict()
+
+    @rank_required
+
     def delete(self, id):
         officer = PoliceOfficer.query.get_or_404(id)
         db.session.delete(officer)
@@ -151,10 +155,11 @@ class AssignmentResource(Resource):
     def get(self, id=None):
         if id:
             assignment = Assignment.query.get_or_404(id)
-            return make_response(jsonify(assignment.to_dict()), 200)
-        else:
-            assignments = [assignment.to_dict() for assignment in Assignment.query.all()]
-            return make_response(jsonify(assignments), 200)
+            return assignment.to_dict()
+        assignments = Assignment.query.all()
+        return [a.to_dict() for a in assignments], 200
+    
+    @rank_required
     
     def post(self):
         data = request.get_json()

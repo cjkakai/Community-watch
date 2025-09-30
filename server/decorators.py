@@ -9,10 +9,10 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-def admin_required(f):
+def rank_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if session.get("role") != "admin":
+        if session.get("rank") != "inspector":
             return {"error": "Admin access required"}, 403
         return f(*args, **kwargs)
     return decorated
